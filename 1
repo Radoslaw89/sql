@@ -1,0 +1,118 @@
+use [AdventureWorks2022]
+
+set statistics io on
+
+declare @quarter tinyint=1, @year int=2011
+
+select OrderDate,SalesOrderID,SalesPersonID, TerritoryID, CustomerID, TotalDue from Sales.SalesOrderHeader
+where DATEPART(QUARTER, OrderDate)=@quarter
+and YEAR(OrderDate)=@year
+
+set statistics io off
+
+create nonclustered index OrderDateSalesOrderHeader on Sales.SalesOrderHeader (OrderDate)
+
+create or alter function SalesOrderQuarterAndYear (@quarter tinyint, @year int)
+returns table as return
+(
+select OrderDate,SalesOrderID,SalesPersonID, TerritoryID, CustomerID, TotalDue
+from Sales.SalesOrderHeader (nolock)
+where DATEPART(QUARTER, OrderDate)=@quarter
+and YEAR(OrderDate)=@year
+)
+go
+
+select * from SalesOrderQuarterAndYear(2,2011)
+
+create or alter function SalesOrderQuarterAndYear2 (@quarter tinyint, @year int)
+returns table as return
+(
+select sum(TotalDue) TotalDue
+from Sales.SalesOrderHeader (nolock)
+where DATEPART(QUARTER, OrderDate)=@quarter
+and YEAR(OrderDate)=@year
+group by YEAR(OrderDate), DATEPART(QUARTER, OrderDate)
+)
+go
+
+set statistics io on
+declare @year1 int=2011, @year2 int=2012, @year3 int=2013, @year4 int=2014
+
+select @year1 Year,(select * from SalesOrderQuarterAndYear2(1,@year1)) Q_1,(select * from SalesOrderQuarterAndYear2(2,@year1)) Q_2, (select * from SalesOrderQuarterAndYear2(3,@year1))Q_3, (select * from SalesOrderQuarterAndYear2(4,@year1))Q_4
+union
+select @year2 Year,(select * from SalesOrderQuarterAndYear2(1,@year2)) Q_1,(select * from SalesOrderQuarterAndYear2(2,@year2)) Q_2, (select * from SalesOrderQuarterAndYear2(3,@year2))Q_3, (select * from SalesOrderQuarterAndYear2(4,@year2))Q_4
+union
+select @year3 Year,(select * from SalesOrderQuarterAndYear2(1,@year3)) Q_1,(select * from SalesOrderQuarterAndYear2(2,@year3)) Q_2, (select * from SalesOrderQuarterAndYear2(3,@year3))Q_3, (select * from SalesOrderQuarterAndYear2(4,@year3))Q_4
+union
+select @year4 Year,(select * from SalesOrderQuarterAndYear2(1,@year4)) Q_1,(select * from SalesOrderQuarterAndYear2(2,@year4)) Q_2, (select * from SalesOrderQuarterAndYear2(3,@year4))Q_3, (select * from SalesOrderQuarterAndYear2(4,@year4))Q_4
+
+--more efficient
+select * from
+(
+select TotalDue, 'Q_'+cast(DATEPART(QUARTER, OrderDate) as nvarchar(1)) as Quarter, YEAR(OrderDate) Year
+from Sales.SalesOrderHeader (nolock)
+--group by YEAR(OrderDate), DATEPART(QUARTER, OrderDate)
+) as T
+pivot ( sum(Totaldue)
+for Quarter in ([Q_1],[Q_2],[Q_3],[Q_4])
+) as p
+
+set statistics io off
+
+select * from
+(
+select TotalDue, 'M_'+cast(DATEPART(month, OrderDate) as nvarchar(2)) as Month, YEAR(OrderDate) Year
+from Sales.SalesOrderHeader (nolock)
+) as T
+pivot ( sum(Totaldue)
+for year in ([2011],[2012],[2013],[2014])
+) as p
+
+order by
+case len(Month)
+when 3 then cast(RIGHT(Month,1) as tinyint)
+else cast(RIGHT(Month,2) as tinyint) end
+
+--compare totaldue values in 2011 to next years in percent
+
+select *,
+case ISNUMERIC(p.[2011]) when 1 then 100 else 0 end
+,round(ISNULL(((p.[2012]-p.[2011])/p.[2011])*100,0),0) [2012]
+,round(ISNULL(((p.[2013]-p.[2011])/p.[2011])*100,0),0) [2013]
+,round(ISNULL(((p.[2014]-p.[2011])/p.[2011])*100,0),0) [2014]
+
+from
+(
+select TotalDue, 'M_'+cast(DATEPART(month, OrderDate) as nvarchar(2)) as Month, YEAR(OrderDate) Year
+from Sales.SalesOrderHeader (nolock)
+) as T
+pivot ( sum(Totaldue)
+for year in ([2011],[2012],[2013],[2014])
+) as p
+
+order by
+case len(Month)
+when 3 then cast(RIGHT(Month,1) as tinyint)
+else cast(RIGHT(Month,2) as tinyint) end
+
+--compare totaldue values - next year to previos year
+
+select *
+,case ISNUMERIC(p.[2011]) when 1 then 100 else 0 end [2011]
+,iif((case ISNUMERIC(p.[2011]) when 1 then 100 else 0 end)=0,100,
+round(((p.[2012]-p.[2011])/p.[2011])*100,4)) [2012]
+,round(ISNULL(((p.[2013]-p.[2012])/p.[2012])*100,0),0) [2013]
+,round(ISNULL(((p.[2014]-p.[2013])/p.[2013])*100,0),0) [2014]
+
+from
+(
+select TotalDue, 'M_'+cast(DATEPART(month, OrderDate) as nvarchar(2)) as Month, YEAR(OrderDate) Year
+from Sales.SalesOrderHeader (nolock)
+) as T
+pivot ( sum(Totaldue)
+for year in ([2011],[2012],[2013],[2014])
+) as p
+order by
+case len(Month)
+when 3 then cast(RIGHT(Month,1) as tinyint)
+else cast(RIGHT(Month,2) as tinyint) end
