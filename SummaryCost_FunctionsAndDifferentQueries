@@ -15,10 +15,10 @@ create nonclustered index OrderDateSalesOrderHeader on Sales.SalesOrderHeader (O
 create or alter function SalesOrderQuarterAndYear (@quarter tinyint, @year int)
 returns table as return
 (
-select OrderDate,SalesOrderID,SalesPersonID, TerritoryID, CustomerID, TotalDue
-from Sales.SalesOrderHeader (nolock)
-where DATEPART(QUARTER, OrderDate)=@quarter
-and YEAR(OrderDate)=@year
+  select OrderDate,SalesOrderID,SalesPersonID, TerritoryID, CustomerID, TotalDue
+  from Sales.SalesOrderHeader (nolock)
+  where DATEPART(QUARTER, OrderDate)=@quarter
+  and YEAR(OrderDate)=@year
 )
 go
 
