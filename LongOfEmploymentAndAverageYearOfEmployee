@@ -22,7 +22,7 @@ with LoE as (
 						where EndDate is  null 
 						
 						group by GroupName
-			),
+	     ),
 
 YearOfEmployee as (
 						select dep.groupname, AVG(YearOfEmployee) [AVG_YearOfEmployee ]
@@ -39,7 +39,7 @@ YearOfEmployee as (
 						where EndDate is  null 
 						
 						group by GroupName
-				  )
+		   )
 
 select 
 LoE.*,YearOfEmployee.[AVG_YearOfEmployee ]
