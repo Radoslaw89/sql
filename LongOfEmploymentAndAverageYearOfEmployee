@@ -1,0 +1,47 @@
+
+--use [AdventureWorks2022] -- MS demo database
+
+with LoE as (
+						select 
+						dep.groupname,
+						avg(DATEDIFF(year,emp.HireDate, GETDATE())) as [LoE - in years],
+						round(cast(avg(DATEDIFF(month,emp.HireDate, GETDATE())) as float)/12,2) as [LoE - more accurate],
+						cast(avg(DATEDIFF(month,emp.HireDate, GETDATE()))/12 AS varchar(3))+' years and '+
+						cast(avg(DATEDIFF(month,emp.HireDate, GETDATE()))%12 as varchar(2)) + ' months' [LoE - most accurate]
+						
+						from [HumanResources].[EmployeeDepartmentHistory] deph (nolock)
+						join 
+							(
+								select BusinessEntityID, JobTitle,BirthDate, MaritalStatus, Gender, HireDate, VacationHours, SickLeaveHours from [HumanResources].[Employee] (nolock)
+							) emp on deph.BusinessEntityID=emp.BusinessEntityID
+						join 
+							(
+								select departmentid, name, groupname from [HumanResources].[Department] (nolock)
+							) dep on deph.DepartmentID=dep.DepartmentID
+						
+						where EndDate is  null 
+						
+						group by GroupName
+			),
+
+YearOfEmployee as (
+						select dep.groupname, AVG(YearOfEmployee) [AVG_YearOfEmployee ]
+						from [HumanResources].[EmployeeDepartmentHistory] deph (nolock)
+						join 
+							(
+								select BusinessEntityID, datediff(year, BirthDate, GETDATE()) YearOfEmployee from [HumanResources].[Employee] (nolock)
+							) emp on deph.BusinessEntityID=emp.BusinessEntityID
+						join 
+							(
+								select departmentid, groupname from [HumanResources].[Department] (nolock)
+							) dep on deph.DepartmentID=dep.DepartmentID
+						
+						where EndDate is  null 
+						
+						group by GroupName
+				  )
+
+select 
+LoE.*,YearOfEmployee.[AVG_YearOfEmployee ]
+from LoE join YearOfEmployee on LoE.groupname=YearOfEmployee.GroupName
+
