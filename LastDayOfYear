@@ -34,7 +34,7 @@ set @your_date='20540901'
 --random add years to your date
 set @random_add =(select DATEADD(year, ceiling(RAND()*100), @your_date))
 
---display date
+--display dates
 select @your_date, @random_add
 
 --in result we have a last day of random year based on your date 
