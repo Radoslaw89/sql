@@ -1,0 +1,42 @@
+create or alter function LastDayOfYear (@data date)
+returns table as return
+
+--we want in result last day of year
+(
+select 
+eomonth(
+		dateadd(month,
+					CASe month(@data) 
+						when 1 then 11
+						when 2 then 10
+						when 3 then 9
+						when 4 then 8
+						when 5 then 7
+						when 6 then 6
+						when 7 then 5
+						when 8 then 4
+						when 9 then 3
+						when 10 then 2
+						when 11 then 1
+						else 0 end , 
+				@data
+				),
+		0
+	) as LastDayOfYear
+)
+
+
+--define var
+declare @your_date datetime, @random_add datetime
+
+--set your date
+set @your_date='20540901'
+
+--random add years to your date
+set @random_add =(select DATEADD(year, ceiling(RAND()*100), @your_date))
+
+--display date
+select @your_date, @random_add
+
+--in result we have a last day of random year based on your date 
+select * from LastDayOfYear(@random_add)
