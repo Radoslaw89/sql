@@ -25,7 +25,6 @@ eomonth(
 	) as LastDayOfYear
 )
 
-
 --define var
 declare @your_date datetime, @random_add datetime
 
